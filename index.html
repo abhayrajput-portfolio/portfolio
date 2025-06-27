@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Name - Personal Portfolio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc; /* Light gray background */
+        }
+        /* Custom styles for Leaflet map */
+        #map {
+            height: 500px; /* Adjust map height as needed */
+            width: 100%;
+            border-radius: 0.75rem; /* rounded-xl */
+        }
+        /* Hide Leaflet attributions that might overlap */
+        .leaflet-control-attribution {
+            display: none !important;
+        }
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        /* Modal Content */
+        .modal-content {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.open .modal-content {
+            transform: translateY(0);
+        }
+        .modal-close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #4a5568; /* Gray-700 */
+        }
+        .modal-image-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .modal-image {
+            width: 100%;
+            height: 200px; /* Fixed height for consistent look */
+            object-fit: cover; /* Cover the area, cropping if necessary */
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <!-- Navigation Bar -->
+    <nav class="bg-gradient-to-r from-blue-600 to-purple-700 p-4 shadow-lg fixed w-full z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="#home" class="text-white text-2xl font-bold rounded-md px-3 py-2 transition-transform transform hover:scale-105">Your Name</a>
+            <div class="flex space-x-6">
+                <a href="#about" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">About</a>
+                <a href="#academics" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Academics</a>
+                <a href="#experience" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Experience</a>
+                <a href="#travel" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Travel</a>
+                <a href="#achievements" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Achievements</a>
+                <a href="#contact" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero/Home Section -->
+    <section id="home" class="bg-gradient-to-br from-blue-500 to-purple-600 text-white py-24 flex items-center justify-center min-h-screen-75 rounded-b-3xl shadow-xl">
+        <div class="container mx-auto text-center px-4">
+            <img src="https://placehold.co/150x150/FFD700/000?text=Profile" alt="Your Name" class="rounded-full w-40 h-40 mx-auto mb-6 border-4 border-white shadow-lg object-cover">
+            <h1 class="text-5xl md:text-6xl font-extrabold mb-4 animate-fade-in">Hi, I'm <span class="text-yellow-300">Your Name</span>!</h1>
+            <p class="text-xl md:text-2xl mb-8 leading-relaxed">A passionate learner, explorer, and problem-solver.</p>
+            <a href="#about" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105">Learn More About Me</a>
+        </div>
+    </section>
+
+    <!-- About Me Section -->
+    <section id="about" class="py-16 md:py-24 bg-white px-4">
+        <div class="container mx-auto max-w-4xl">
+            <h2 class="text-4xl font-bold text-center mb-12 text-blue-700">About Me</h2>
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div class="text-lg leading-relaxed space-y-4">
+                    <p>Hello! I'm **[Your Name]**, a dedicated individual with a knack for **[mention a key skill, e.g., problem-solving, creative thinking, data analysis]**. My journey has been shaped by diverse experiences in **[mention fields, e.g., technology, education, travel]**, where I've consistently sought to learn and grow.</p>
+                    <p>I thrive on challenges and am always eager to dive into new projects that push my boundaries. Whether it's **[mention a hobby/interest, e.g., coding innovative solutions, exploring new cultures, crafting compelling stories]**, I approach every endeavor with enthusiasm and a commitment to excellence.</p>
+                    <p>This portfolio is a glimpse into my professional and personal life, showcasing my academic achievements, work experiences, and the incredible places I've had the privilege to explore around the world. Welcome to my story!</p>
+                </div>
+                <div class="relative w-full h-80 rounded-xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                    <img src="https://placehold.co/600x400/9966FF/FFFFFF?text=Your+Personal+Photo" alt="Your Personal Photo" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
+                        <p class="text-white text-xl font-semibold">"Driven by Curiosity"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Academics Section -->
+    <section id="academics" class="py-16 md:py-24 bg-gray-50 px-4">
+        <div class="container mx-auto max-w-4xl">
+            <h2 class="text-4xl font-bold text-center mb-12 text-purple-700">Academics</h2>
+            <div class="space-y-10">
+                <!-- Academic Entry 1 -->
+                <div class="bg-white p-8 rounded-xl shadow-xl border-l-4 border-purple-500 hover:shadow-2xl transition-shadow duration-300">
+                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">Master of Science in [Your Field]</h3>
+                    <p class="text-lg text-gray-600 mb-2"><strong>[Your University Name]</strong> | [City, Country]</p>
+                    <p class="text-md text-gray-500 mb-4">Graduated: [Month, Year] | GPA: [Your GPA/Percentage]</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>Relevant Coursework: Advanced [Course 1], [Course 2], [Course 3].</li>
+                        <li>Master's Thesis/Project: "[Title of your thesis/project]" - Focused on [brief description].</li>
+                        <li>Key Achievement: [e.g., Awarded 'Outstanding Graduate Student', Developed a prototype].</li>
+                    </ul>
+                </div>
+                <!-- Academic Entry 2 (Optional) -->
+                <div class="bg-white p-8 rounded-xl shadow-xl border-l-4 border-blue-500 hover:shadow-2xl transition-shadow duration-300">
+                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">Bachelor of [Your Degree] in [Your Field]</h3>
+                    <p class="text-lg text-gray-600 mb-2"><strong>[Your University Name]</strong> | [City, Country]</p>
+                    <p class="text-md text-gray-500 mb-4">Graduated: [Month, Year] | GPA: [Your GPA/Percentage]</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>Relevant Coursework: Introduction to [Course 1], [Course 2], [Course 3].</li>
+                        <li>Capstone Project: "[Title of your project]" - Explored [brief description].</li>
+                        <li>Extra-curricular: [e.g., Member of Robotics Club, Volunteer for X cause].</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Work Experience Section -->
+    <section id="experience" class="py-16 md:py-24 bg-white px-4">
+        <div class="container mx-auto max-w-4xl">
+            <h2 class="text-4xl font-bold text-center mb-12 text-blue-700">Work Experience</h2>
+            <div class="space-y-10">
+                <!-- Experience Entry 1 -->
+                <div class="bg-gray-50 p-8 rounded-xl shadow-xl border-l-4 border-blue-500 hover:shadow-2xl transition-shadow duration-300">
+                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Your Job Title]</h3>
+                    <p class="text-lg text-gray-600 mb-2"><strong>[Company Name]</strong> | [City, Country]</p>
+                    <p class="text-md text-gray-500 mb-4">[Start Date] – [End Date]</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>[Achievement 1]: Spearheaded [project/initiative] resulting in [quantifiable outcome, e.g., 20% efficiency improvement].</li>
+                        <li>[Responsibility 2]: Collaborated with [team/department] to [action] and achieve [goal].</li>
+                        <li>[Skill Used 3]: Utilized [technology/methodology] to [task], enhancing [aspect].</li>
+                    </ul>
+                </div>
+                <!-- Experience Entry 2 (Optional) -->
+                <div class="bg-gray-50 p-8 rounded-xl shadow-xl border-l-4 border-purple-500 hover:shadow-2xl transition-shadow duration-300">
+                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Another Job Title]</h3>
+                    <p class="text-lg text-gray-600 mb-2"><strong>[Another Company Name]</strong> | [City, Country]</p>
+                    <p class="text-md text-gray-500 mb-4">[Start Date] – [End Date]</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>[Achievement 1]: Managed [process/product], leading to [positive result].</li>
+                        <li>[Responsibility 2]: Developed and implemented [solution], improving [metric].</li>
+                        <li>[Skill Used 3]: Provided [service/support] to [stakeholders], ensuring [quality/satisfaction].</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Travel Map Section -->
+    <section id="travel" class="py-16 md:py-24 bg-gray-50 px-4">
+        <div class="container mx-auto max-w-6xl">
+            <h2 class="text-4xl font-bold text-center mb-12 text-purple-700">My Journeys Around the World</h2>
+            <p class="text-xl text-center text-gray-600 mb-8">Click on a marker to see photos from my adventures!</p>
+            <div id="map" class="rounded-xl shadow-2xl border border-gray-200"></div>
+        </div>
+    </section>
+
+    <!-- Certificates & Achievements Section -->
+    <section id="achievements" class="py-16 md:py-24 bg-white px-4">
+        <div class="container mx-auto max-w-4xl">
+            <h2 class="text-4xl font-bold text-center mb-12 text-blue-700">Certificates & Achievements</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Certificate/Achievement 1 -->
+                <div class="bg-gray-50 p-6 rounded-xl shadow-xl border-l-4 border-blue-500 hover:shadow-2xl transition-shadow duration-300">
+                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Certificate Name/Award Title]</h3>
+                    <p class="text-lg text-gray-600 mb-2"><strong>[Issuing Organization/Awarding Body]</strong> | [Year]</p>
+                    <p class="text-md text-gray-700 mb-4">[Brief description of what it signifies or what you achieved].</p>
+                    <a href="https://placehold.co/300x200/cccccc/333333?text=Certificate+Image" target="_blank" class="text-blue-600 hover:underline flex items-center">
+                        View Certificate 
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0l-7 7"></path></svg>
+                    </a>
+                </div>
+                <!-- Certificate/Achievement 2 -->
+                <div class="bg-gray-50 p-6 rounded-xl shadow-xl border-l-4 border-purple-500 hover:shadow-2xl transition-shadow duration-300">
+                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Another Certificate/Award Title]</h3>
+                    <p class="text-lg text-gray-600 mb-2"><strong>[Issuing Organization/Awarding Body]</strong> | [Year]</p>
+                    <p class="text-md text-gray-700 mb-4">[Brief description of what it signifies or what you achieved].</p>
+                    <a href="https://placehold.co/300x200/cccccc/333333?text=Certificate+Image" target="_blank" class="text-purple-600 hover:underline flex items-center">
+                        View Certificate 
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0l-7 7"></path></svg>
+                    </a>
+                </div>
+                <!-- Add more as needed -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Me Section -->
+    <section id="contact" class="py-16 md:py-24 bg-gradient-to-r from-blue-600 to-purple-700 text-white px-4 rounded-t-3xl shadow-xl">
+        <div class="container mx-auto max-w-2xl text-center">
+            <h2 class="text-4xl font-bold mb-8">Get In Touch</h2>
+            <p class="text-xl mb-8">I'm always open to new opportunities and collaborations. Feel free to reach out!</p>
+            <div class="space-y-4">
+                <a href="mailto:your.email@example.com" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path></svg>
+                    your.email@example.com
+                </a>
+                <a href="https://linkedin.com/in/yourprofile" target="_blank" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.3 0H3.7C1.65 0 0 1.65 0 3.7v12.6C0 18.35 1.65 20 3.7 20h12.6c2.05 0 3.7-1.65 3.7-3.7V3.7C20 1.65 18.35 0 16.3 0zM6 17H3V7h3v10zM4.5 5.5A1.5 1.5 0 116 4a1.5 1.5 0 01-1.5 1.5zM17 17h-3v-5c0-1.2-.8-2-1.9-2-1.1 0-1.9.8-1.9 2v5h-3V7h3v.7c.6-1.1 1.7-1.8 3.3-1.8 2.2 0 3.8 1.4 3.8 4.5V17z" clip-rule="evenodd"></svg>
+                    LinkedIn Profile
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 text-center">
+        <p>&copy; <span id="current-year"></span> Your Name. All rights reserved.</p>
+        <p class="text-sm mt-2">Designed with ❤️ using HTML, Tailwind CSS, and Leaflet.js</p>
+    </footer>
+
+    <!-- Image Modal/Lightbox Structure -->
+    <div id="imageModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close-button" onclick="closeModal()">&times;</button>
+            <h3 id="modalLocationName" class="text-3xl font-bold mb-4 text-blue-700"></h3>
+            <p id="modalLocationDescription" class="text-lg text-gray-700 mb-6"></p>
+            <div id="modalImageContainer" class="modal-image-container">
+                <!-- Images will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjGwZZyihszBvIEAFIwQqnPN1/3z=="
+        crossorigin=""></script>
+
+    <script>
+        // Set current year in footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Initialize the Leaflet Map
+        const map = L.map('map').setView([20, 0], 2); // Centered on the world, zoom level 2
+
+        // Add a tile layer (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // Data for your visited locations
+        // IMPORTANT: Replace the coordinates (latitude, longitude) and image URLs with your actual data!
+        // Placeholder images are used here from placehold.co.
+        const visitedLocations = [
+            {
+                name: "Paris, France",
+                lat: 48.8566,
+                lon: 2.3522,
+                description: "The city of lights, love, and incredible history. Exploring the Eiffel Tower, the Louvre, and charming Parisian streets was an unforgettable experience.",
+                images: [
+                    "https://placehold.co/400x300/FF5733/FFFFFF?text=Paris+1",
+                    "https://placehold.co/400x300/33FF57/FFFFFF?text=Paris+2",
+                    "https://placehold.co/400x300/3357FF/FFFFFF?text=Paris+3"
+                ]
+            },
+            {
+                name: "Kyoto, Japan",
+                lat: 35.0116,
+                lon: 135.7681,
+                description: "A city where ancient traditions meet modern life. Cherry blossoms, serene temples, and vibrant geisha districts made this trip truly magical.",
+                images: [
+                    "https://placehold.co/400x300/FF33A1/FFFFFF?text=Kyoto+1",
+                    "https://placehold.co/400x300/33A1FF/FFFFFF?text=Kyoto+2",
+                    "https://placehold.co/400x300/A1FF33/FFFFFF?text=Kyoto+3",
+                    "https://placehold.co/400x300/5733FF/FFFFFF?text=Kyoto+4"
+                ]
+            },
+            {
+                name: "Rio de Janeiro, Brazil",
+                lat: -22.9068,
+                lon: -43.1729,
+                description: "The stunning beaches, vibrant music, and breathtaking views from Sugarloaf Mountain and Christ the Redeemer were simply captivating.",
+                images: [
+                    "https://placehold.co/400x300/FFBB33/FFFFFF?text=Rio+1",
+                    "https://placehold.co/400x300/33FFBB/FFFFFF?text=Rio+2"
+                ]
+            },
+            {
+                name: "Sydney, Australia",
+                lat: -33.8688,
+                lon: 151.2093,
+                description: "From the iconic Opera House to the stunning Harbour Bridge and beautiful beaches, Sydney offered endless adventures.",
+                images: [
+                    "https://placehold.co/400x300/8A33FF/FFFFFF?text=Sydney+1",
+                    "https://placehold.co/400x300/FF338A/FFFFFF?text=Sydney+2",
+                    "https://placehold.co/400x300/33FF8A/FFFFFF?text=Sydney+3"
+                ]
+            },
+            {
+                name: "Cairo, Egypt",
+                lat: 30.0444,
+                lon: 31.2357,
+                description: "Stepping back in time amidst the majestic pyramids and ancient wonders of Giza. A truly awe-inspiring historical journey.",
+                images: [
+                    "https://placehold.co/400x300/338AFF/FFFFFF?text=Cairo+1",
+                    "https://placehold.co/400x300/FF8A33/FFFFFF?text=Cairo+2"
+                ]
+            },
+            {
+                name: "New York City, USA",
+                lat: 40.7128,
+                lon: -74.0060,
+                description: "The city that never sleeps! Exploring Times Square, Central Park, and the Statue of Liberty was an exhilarating urban adventure.",
+                images: [
+                    "https://placehold.co/400x300/57FF33/FFFFFF?text=NYC+1",
+                    "https://placehold.co/400x300/FF3357/FFFFFF?text=NYC+2",
+                    "https://placehold.co/400x300/3357FF/FFFFFF?text=NYC+3"
+                ]
+            }
+        ];
+
+        // Get modal elements
+        const imageModal = document.getElementById('imageModal');
+        const modalLocationName = document.getElementById('modalLocationName');
+        const modalLocationDescription = document.getElementById('modalLocationDescription');
+        const modalImageContainer = document.getElementById('modalImageContainer');
+
+        // Function to open the modal
+        function openModal(locationData) {
+            modalLocationName.textContent = locationData.name;
+            modalLocationDescription.textContent = locationData.description;
+            modalImageContainer.innerHTML = ''; // Clear previous images
+
+            // Add images to the modal
+            locationData.images.forEach(imageSrc => {
+                const img = document.createElement('img');
+                img.src = imageSrc;
+                img.alt = `Photo from ${locationData.name}`;
+                img.classList.add('modal-image');
+                modalImageContainer.appendChild(img);
+            });
+
+            imageModal.classList.add('open');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling background
+        }
+
+        // Function to close the modal
+        function closeModal() {
+            imageModal.classList.remove('open');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        // Add event listener to close modal when clicking outside content
+        imageModal.addEventListener('click', (e) => {
+            if (e.target === imageModal) {
+                closeModal();
+            }
+        });
+
+        // Add markers for each location
+        visitedLocations.forEach(location => {
+            const marker = L.marker([location.lat, location.lon]).addTo(map);
+
+            // Attach click event to the marker
+            marker.on('click', () => {
+                openModal(location);
+            });
+        });
+    </script>
+</body>
+</html>
