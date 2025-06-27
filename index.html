@@ -7,26 +7,45 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-        crossorigin=""/>
+    <!-- Three.js CDN for 3D Globe -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls for Three.js (to enable mouse interaction with the globe) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f7fafc; /* Light gray background */
+            scroll-behavior: smooth; /* Smooth scrolling for anchor links */
         }
-        /* Custom styles for Leaflet map */
-        #map {
-            height: 500px; /* Adjust map height as needed */
+        /* Hide all sections by default, JavaScript will manage visibility */
+        .page-section {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            min-height: calc(100vh - 6rem); /* Adjust based on nav height */
+            padding-top: 6rem; /* Offset for fixed nav */
+        }
+        .page-section.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* Custom styles for 3D Globe */
+        #globe-container {
             width: 100%;
+            height: 500px; /* Adjust globe height as needed */
+            background-color: #f0f0f0; /* Light background for the globe container */
             border-radius: 0.75rem; /* rounded-xl */
+            overflow: hidden;
+            position: relative;
+            z-index: 1; /* Ensure globe is above other elements */
         }
-        /* Hide Leaflet attributions that might overlap */
-        .leaflet-control-attribution {
-            display: none !important;
+        #globe-canvas {
+            display: block;
         }
-        /* Modal Overlay */
+
+        /* Modal Overlay (from previous version, ensuring it works) */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -85,177 +104,194 @@
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
+        /* Responsive styles for navigation */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                width: 100%;
+                background-color: #4f46e5; /* Adjusted for mobile */
+                position: absolute;
+                top: 100%;
+                left: 0;
+                padding-bottom: 1rem;
+                border-radius: 0 0 0.75rem 0.75rem;
+                box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            }
+            .nav-links.open {
+                display: flex;
+            }
+            .nav-links a {
+                text-align: center;
+                padding: 0.75rem 0;
+            }
+            .menu-toggle {
+                display: block;
+                color: white;
+                font-size: 1.8rem;
+                cursor: pointer;
+            }
+        }
+        @media (min-width: 769px) {
+            .menu-toggle {
+                display: none;
+            }
+            .nav-links {
+                display: flex !important; /* Ensure always visible on desktop */
+            }
+        }
     </style>
 </head>
 <body class="text-gray-800">
     <!-- Navigation Bar -->
     <nav class="bg-gradient-to-r from-blue-600 to-purple-700 p-4 shadow-lg fixed w-full z-50">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="#home" class="text-white text-2xl font-bold rounded-md px-3 py-2 transition-transform transform hover:scale-105">Your Name</a>
-            <div class="flex space-x-6">
-                <a href="#about" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">About</a>
-                <a href="#academics" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Academics</a>
-                <a href="#experience" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Experience</a>
-                <a href="#travel" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Travel</a>
-                <a href="#achievements" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Achievements</a>
-                <a href="#contact" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20">Contact</a>
+        <div class="container mx-auto flex justify-between items-center relative">
+            <a href="#home" class="text-white text-2xl font-bold rounded-md px-3 py-2 transition-transform transform hover:scale-105" onclick="navigate('home')">Your Name</a>
+            <div class="menu-toggle md:hidden" id="menuToggle">&#9776;</div>
+            <div class="nav-links flex space-x-6" id="navLinks">
+                <a href="#about" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20" onclick="navigate('about')">About</a>
+                <a href="#academics" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20" onclick="navigate('academics')">Academics</a>
+                <a href="#experience" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20" onclick="navigate('experience')">Experience</a>
+                <a href="#travel" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20" onclick="navigate('travel')">Travel</a>
+                <a href="#achievements" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20" onclick="navigate('achievements')">Achievements</a>
+                <a href="#contact" class="text-white hover:text-blue-200 transition duration-300 rounded-md px-3 py-2 hover:bg-white hover:bg-opacity-20" onclick="navigate('contact')">Contact</a>
             </div>
         </div>
     </nav>
 
-    <!-- Hero/Home Section -->
-    <section id="home" class="bg-gradient-to-br from-blue-500 to-purple-600 text-white py-24 flex items-center justify-center min-h-screen-75 rounded-b-3xl shadow-xl">
-        <div class="container mx-auto text-center px-4">
-            <img src="https://placehold.co/150x150/FFD700/000?text=Profile" alt="Your Name" class="rounded-full w-40 h-40 mx-auto mb-6 border-4 border-white shadow-lg object-cover">
-            <h1 class="text-5xl md:text-6xl font-extrabold mb-4 animate-fade-in">Hi, I'm <span class="text-yellow-300">Your Name</span>!</h1>
-            <p class="text-xl md:text-2xl mb-8 leading-relaxed">A passionate learner, explorer, and problem-solver.</p>
-            <a href="#about" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105">Learn More About Me</a>
-        </div>
-    </section>
+    <!-- Main Content Area -->
+    <main class="pt-16"> <!-- Padding to offset fixed navigation -->
+        <!-- Home Section -->
+        <section id="home" class="page-section active bg-gradient-to-br from-blue-500 to-purple-600 text-white py-24 flex items-center justify-center min-h-screen-75 rounded-b-3xl shadow-xl">
+            <div class="container mx-auto text-center px-4">
+                <img src="https://placehold.co/150x150/FFD700/000?text=Profile" alt="Your Name" class="rounded-full w-40 h-40 mx-auto mb-6 border-4 border-white shadow-lg object-cover">
+                <h1 class="text-5xl md:text-6xl font-extrabold mb-4 animate-fade-in">Hi, I'm <span class="text-yellow-300">Your Name</span>!</h1>
+                <p class="text-xl md:text-2xl mb-8 leading-relaxed">A passionate learner, explorer, and problem-solver.</p>
+                <button class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105" onclick="navigate('about')">Learn More About Me</button>
+            </div>
+        </section>
 
-    <!-- About Me Section -->
-    <section id="about" class="py-16 md:py-24 bg-white px-4">
-        <div class="container mx-auto max-w-4xl">
-            <h2 class="text-4xl font-bold text-center mb-12 text-blue-700">About Me</h2>
-            <div class="grid md:grid-cols-2 gap-12 items-center">
-                <div class="text-lg leading-relaxed space-y-4">
-                    <p>Hello! I'm **[Your Name]**, a dedicated individual with a knack for **[mention a key skill, e.g., problem-solving, creative thinking, data analysis]**. My journey has been shaped by diverse experiences in **[mention fields, e.g., technology, education, travel]**, where I've consistently sought to learn and grow.</p>
-                    <p>I thrive on challenges and am always eager to dive into new projects that push my boundaries. Whether it's **[mention a hobby/interest, e.g., coding innovative solutions, exploring new cultures, crafting compelling stories]**, I approach every endeavor with enthusiasm and a commitment to excellence.</p>
-                    <p>This portfolio is a glimpse into my professional and personal life, showcasing my academic achievements, work experiences, and the incredible places I've had the privilege to explore around the world. Welcome to my story!</p>
-                </div>
-                <div class="relative w-full h-80 rounded-xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300">
-                    <img src="https://placehold.co/600x400/9966FF/FFFFFF?text=Your+Personal+Photo" alt="Your Personal Photo" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
-                        <p class="text-white text-xl font-semibold">"Driven by Curiosity"</p>
+        <!-- About Me Section -->
+        <section id="about" class="page-section py-16 md:py-24 bg-white px-4">
+            <div class="container mx-auto max-w-4xl">
+                <h2 class="text-4xl font-bold text-center mb-12 text-blue-700">About Me</h2>
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="text-lg leading-relaxed space-y-4">
+                        <p>Hello! I'm **[Your Name]**, a dedicated individual with a knack for **[mention a key skill, e.g., problem-solving, creative thinking, data analysis]**. My journey has been shaped by diverse experiences in **[mention fields, e.g., technology, education, travel]**, where I've consistently sought to learn and grow.</p>
+                        <p>I thrive on challenges and am always eager to dive into new projects that push my boundaries. Whether it's **[mention a hobby/interest, e.g., coding innovative solutions, exploring new cultures, crafting compelling stories]**, I approach every endeavor with enthusiasm and a commitment to excellence.</p>
+                        <p>This portfolio is a glimpse into my professional and personal life, showcasing my academic achievements, work experiences, and the incredible places I've had the privilege to explore around the world. Welcome to my story!</p>
+                    </div>
+                    <div class="relative w-full h-80 rounded-xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                        <img src="https://placehold.co/600x400/9966FF/FFFFFF?text=Your+Personal+Photo" alt="Your Personal Photo" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
+                            <p class="text-white text-xl font-semibold">"Driven by Curiosity"</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Academics Section -->
-    <section id="academics" class="py-16 md:py-24 bg-gray-50 px-4">
-        <div class="container mx-auto max-w-4xl">
-            <h2 class="text-4xl font-bold text-center mb-12 text-purple-700">Academics</h2>
-            <div class="space-y-10">
-                <!-- Academic Entry 1 -->
-                <div class="bg-white p-8 rounded-xl shadow-xl border-l-4 border-purple-500 hover:shadow-2xl transition-shadow duration-300">
-                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">Master of Science in [Your Field]</h3>
-                    <p class="text-lg text-gray-600 mb-2"><strong>[Your University Name]</strong> | [City, Country]</p>
-                    <p class="text-md text-gray-500 mb-4">Graduated: [Month, Year] | GPA: [Your GPA/Percentage]</p>
-                    <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>Relevant Coursework: Advanced [Course 1], [Course 2], [Course 3].</li>
-                        <li>Master's Thesis/Project: "[Title of your thesis/project]" - Focused on [brief description].</li>
-                        <li>Key Achievement: [e.g., Awarded 'Outstanding Graduate Student', Developed a prototype].</li>
-                    </ul>
-                </div>
-                <!-- Academic Entry 2 (Optional) -->
-                <div class="bg-white p-8 rounded-xl shadow-xl border-l-4 border-blue-500 hover:shadow-2xl transition-shadow duration-300">
-                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">Bachelor of [Your Degree] in [Your Field]</h3>
-                    <p class="text-lg text-gray-600 mb-2"><strong>[Your University Name]</strong> | [City, Country]</p>
-                    <p class="text-md text-gray-500 mb-4">Graduated: [Month, Year] | GPA: [Your GPA/Percentage]</p>
-                    <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>Relevant Coursework: Introduction to [Course 1], [Course 2], [Course 3].</li>
-                        <li>Capstone Project: "[Title of your project]" - Explored [brief description].</li>
-                        <li>Extra-curricular: [e.g., Member of Robotics Club, Volunteer for X cause].</li>
-                    </ul>
+        <!-- Academics Section -->
+        <section id="academics" class="page-section py-16 md:py-24 bg-gray-50 px-4">
+            <div class="container mx-auto max-w-4xl">
+                <h2 class="text-4xl font-bold text-center mb-12 text-purple-700">Academics</h2>
+                <div id="academic-entries" class="space-y-12">
+                    <!-- Academic entries will be dynamically loaded here -->
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Work Experience Section -->
-    <section id="experience" class="py-16 md:py-24 bg-white px-4">
-        <div class="container mx-auto max-w-4xl">
-            <h2 class="text-4xl font-bold text-center mb-12 text-blue-700">Work Experience</h2>
-            <div class="space-y-10">
-                <!-- Experience Entry 1 -->
-                <div class="bg-gray-50 p-8 rounded-xl shadow-xl border-l-4 border-blue-500 hover:shadow-2xl transition-shadow duration-300">
-                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Your Job Title]</h3>
-                    <p class="text-lg text-gray-600 mb-2"><strong>[Company Name]</strong> | [City, Country]</p>
-                    <p class="text-md text-gray-500 mb-4">[Start Date] – [End Date]</p>
-                    <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>[Achievement 1]: Spearheaded [project/initiative] resulting in [quantifiable outcome, e.g., 20% efficiency improvement].</li>
-                        <li>[Responsibility 2]: Collaborated with [team/department] to [action] and achieve [goal].</li>
-                        <li>[Skill Used 3]: Utilized [technology/methodology] to [task], enhancing [aspect].</li>
-                    </ul>
-                </div>
-                <!-- Experience Entry 2 (Optional) -->
-                <div class="bg-gray-50 p-8 rounded-xl shadow-xl border-l-4 border-purple-500 hover:shadow-2xl transition-shadow duration-300">
-                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Another Job Title]</h3>
-                    <p class="text-lg text-gray-600 mb-2"><strong>[Another Company Name]</strong> | [City, Country]</p>
-                    <p class="text-md text-gray-500 mb-4">[Start Date] – [End Date]</p>
-                    <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>[Achievement 1]: Managed [process/product], leading to [positive result].</li>
-                        <li>[Responsibility 2]: Developed and implemented [solution], improving [metric].</li>
-                        <li>[Skill Used 3]: Provided [service/support] to [stakeholders], ensuring [quality/satisfaction].</li>
-                    </ul>
+        <!-- Work Experience Section -->
+        <section id="experience" class="page-section py-16 md:py-24 bg-white px-4">
+            <div class="container mx-auto max-w-4xl">
+                <h2 class="text-4xl font-bold text-center mb-12 text-blue-700">Work Experience</h2>
+                <div id="experience-entries" class="space-y-12">
+                    <!-- Work experience entries will be dynamically loaded here -->
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Travel Map Section -->
-    <section id="travel" class="py-16 md:py-24 bg-gray-50 px-4">
-        <div class="container mx-auto max-w-6xl">
-            <h2 class="text-4xl font-bold text-center mb-12 text-purple-700">My Journeys Around the World</h2>
-            <p class="text-xl text-center text-gray-600 mb-8">Click on a marker to see photos from my adventures!</p>
-            <div id="map" class="rounded-xl shadow-2xl border border-gray-200"></div>
-        </div>
-    </section>
+        <!-- Travel Globe Section -->
+        <section id="travel" class="page-section py-16 md:py-24 bg-gray-50 px-4">
+            <div class="container mx-auto max-w-6xl">
+                <h2 class="text-4xl font-bold text-center mb-12 text-purple-700">My Journeys Around the World</h2>
+                <p class="text-xl text-center text-gray-600 mb-8">Click on a highlighted marker to see photos from my adventures!</p>
+                <div id="globe-container" class="rounded-xl shadow-2xl border border-gray-200">
+                    <!-- Three.js canvas will be appended here -->
+                </div>
+            </div>
+        </section>
 
-    <!-- Certificates & Achievements Section -->
-    <section id="achievements" class="py-16 md:py-24 bg-white px-4">
-        <div class="container mx-auto max-w-4xl">
-            <h2 class="text-4xl font-bold text-center mb-12 text-blue-700">Certificates & Achievements</h2>
-            <div class="grid md:grid-cols-2 gap-8">
-                <!-- Certificate/Achievement 1 -->
-                <div class="bg-gray-50 p-6 rounded-xl shadow-xl border-l-4 border-blue-500 hover:shadow-2xl transition-shadow duration-300">
-                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Certificate Name/Award Title]</h3>
-                    <p class="text-lg text-gray-600 mb-2"><strong>[Issuing Organization/Awarding Body]</strong> | [Year]</p>
-                    <p class="text-md text-gray-700 mb-4">[Brief description of what it signifies or what you achieved].</p>
-                    <a href="https://placehold.co/300x200/cccccc/333333?text=Certificate+Image" target="_blank" class="text-blue-600 hover:underline flex items-center">
-                        View Certificate 
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0l-7 7"></path></svg>
+        <!-- Certificates & Achievements Section -->
+        <section id="achievements" class="page-section py-16 md:py-24 bg-white px-4">
+            <div class="container mx-auto max-w-4xl">
+                <h2 class="text-4xl font-bold text-center mb-12 text-blue-700">Certificates & Achievements</h2>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Certificate/Achievement 1 -->
+                    <div class="bg-gray-50 p-6 rounded-xl shadow-xl border-l-4 border-blue-500 hover:shadow-2xl transition-shadow duration-300">
+                        <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Certificate Name/Award Title]</h3>
+                        <p class="text-lg text-gray-600 mb-2"><strong>[Issuing Organization/Awarding Body]</strong> | [Year]</p>
+                        <p class="text-md text-gray-700 mb-4">[Brief description of what it signifies or what you achieved].</p>
+                        <a href="https://placehold.co/300x200/cccccc/333333?text=Certificate+Image" target="_blank" class="text-blue-600 hover:underline flex items-center">
+                            View Certificate 
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0l-7 7"></path></svg>
+                        </a>
+                    </div>
+                    <!-- Certificate/Achievement 2 -->
+                    <div class="bg-gray-50 p-6 rounded-xl shadow-xl border-l-4 border-purple-500 hover:shadow-2xl transition-shadow duration-300">
+                        <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Another Certificate/Award Title]</h3>
+                        <p class="text-lg text-gray-600 mb-2"><strong>[Issuing Organization/Awarding Body]</strong> | [Year]</p>
+                        <p class="text-md text-gray-700 mb-4">[Brief description of what it signifies or what you achieved].</p>
+                        <a href="https://placehold.co/300x200/cccccc/333333?text=Certificate+Image" target="_blank" class="text-purple-600 hover:underline flex items-center">
+                            View Certificate 
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0l-7 7"></path></svg>
+                        </a>
+                    </div>
+                    <!-- Add more as needed -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Me Section -->
+        <section id="contact" class="page-section py-16 md:py-24 bg-gradient-to-r from-blue-600 to-purple-700 text-white px-4 rounded-t-3xl shadow-xl">
+            <div class="container mx-auto max-w-2xl text-center">
+                <h2 class="text-4xl font-bold mb-8">Get In Touch</h2>
+                <p class="text-xl mb-8">I'm always open to new opportunities and collaborations. Feel free to reach out!</p>
+                <div class="flex flex-wrap justify-center gap-6">
+                    <a href="mailto:your.email@example.com" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path></svg>
+                        Email
+                    </a>
+                    <a href="https://linkedin.com/in/yourprofile" target="_blank" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4.98 3.5c0 1.381-1.119 2.5-2.5 2.5s-2.5-1.119-2.5-2.5 1.119-2.5 2.5-2.5 2.5 1.119 2.5 2.5zm-.02 4.5h-2.96v12h2.96v-12zm3.96 0h-2.96v12h2.96v-6.33c0-.857.067-1.701.272-2.361.206-.66.671-1.282 1.637-1.282 1.251 0 2.21 1.026 2.21 2.923v6.05h2.96v-6.33c0-2.88-2.072-4.004-4.896-4.004-1.979 0-3.088 1.054-3.696 1.942v-1.608z"/></svg>
+                        LinkedIn
+                    </a>
+                    <a href="https://instagram.com/yourprofile" target="_blank" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07c1.377.065 2.221.328 2.921.660.673.325 1.166.760 1.621 1.215.459.458.898.951 1.215 1.621.332.70.595 1.545.660 2.921.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.065 1.377-.328 2.221-.660 2.921-.325.673-.760 1.166-1.215 1.621-.458.459-.951.898-1.621 1.215-.70.332-1.545.595-2.921.660-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.377-.065-2.221-.328-2.921-.660-.673-.325-1.166-.760-1.621-1.215-.459-.458-.898-.951-1.215-1.621-.332-.70-.595-1.545-.660-2.921-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.065-1.377.328-2.221.660-2.921.325-.673.760-1.166 1.215-1.621.458-.459.951-.898 1.621-1.215.70-.332 1.545-.595 2.921-.660 1.266-.058 1.646-.07 4.85-.07zm0 2.802c-3.25 0-3.693.012-4.943.072-1.381.066-2.032.321-2.463.535-.61.307-1.042.668-1.411 1.037-.369.369-.73.803-1.037 1.411-.214.43-.469 1.082-.535 2.463-.06 1.25-.072 1.694-.072 4.943s.012 3.693.072 4.943c.066 1.381.321 2.032.535 2.463.307.61.668 1.042 1.037 1.411.369.369.803.73 1.411 1.037.43.214 1.082.469 2.463.535 1.25.06 1.694.072 4.943.072s3.693-.012 4.943-.072c1.381-.066 2.032-.321 2.463-.535.61-.307 1.042-.668 1.411-1.037.369-.369.73-.803 1.037-1.411.214-.43.469-1.082.535-2.463-.06-1.25-.072-1.694-.072-4.943s.012-3.693-.072-4.943c-.066-1.381-.321-2.032-.535-2.463-.307-.61-.668-1.042-1.037-1.411-.369-.369-.803-.73-1.411-1.037-.43-.214-1.082-.469-.535-2.463zm-12.247 1.242c.813 0 1.472.658 1.472 1.47s-.659 1.472-1.472 1.472-1.47-659-1.47-1.472.658-1.47 1.47-1.47zm7.505 5.334c-2.072 0-3.75 1.678-3.75 3.75s1.678 3.75 3.75 3.75 3.75-1.678 3.75-3.75-1.678-3.75-3.75-3.75zm0 6.126c-1.304 0-2.375-1.07-2.375-2.375s1.07-2.375 2.375-2.375 2.375 1.07 2.375 2.375-1.07 2.375-2.375 2.375z"/></svg>
+                        Instagram
+                    </a>
+                    <a href="https://facebook.com/yourprofile" target="_blank" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.505 1.492-3.89 3.776-3.89 1.094 0 2.24.195 2.24.195v2.455H14.23c-1.222 0-1.642.766-1.642 1.562V12h2.773l-.443 2.891h-2.33V22C18.343 21.128 22 16.991 22 12z"/></svg>
+                        Facebook
+                    </a>
+                    <a href="https://twitter.com/yourprofile" target="_blank" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.591 0-6.494 2.903-6.494 6.492 0 .509.058 1.006.171 1.49-.009.11-.016.222-.016.336 0 .42.042.83.12 1.227-5.394-.275-10.198-2.868-13.411-6.79c-.559.957-.88 2.073-.88 3.323 0 2.308 1.18 4.34 2.964 5.53-.275-.009-.54-.084-.777-.215v.081c0 3.15 2.242 5.78 5.215 6.398-.538.147-1.103.222-1.688.222-.412 0-.814-.038-1.203-.116.824 2.584 3.208 4.475 6.035 4.526-2.22 1.745-5.02 2.782-8.067 2.782-.533 0-1.053-.031-1.566-.092.344 2.261 2.046 3.93 4.093 4.673 2.453 1.077 5.163 1.706 8.163 1.706 9.872 0 15.341-8.176 15.341-15.337 0-.235-.005-.468-.013-.701.83-.598 1.55-1.341 2.115-2.196z"/></svg>
+                        Twitter/X
+                    </a>
+                    <a href="https://youtube.com/yourchannel" target="_blank" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.615 3.184c-1.142-.361-2.456-.554-3.957-.554-1.502 0-2.816.193-3.958.554C10.59 3.546 9.47 3.864 8.35 4.184c-1.12.32-2.183.743-3.088 1.346C4.35 5.86 3.905 6.326 3.491 6.837c-.414.51-.762 1.07-.996 1.675-.234.605-.386 1.246-.462 1.905-.075.659-.115 1.332-.115 2.008s.04 1.349.115 2.008c.076.659.228 1.302.462 1.905.234.605.582 1.165.996 1.675.414.51.859.976 1.411 1.346.905.603 1.968 1.026 3.088 1.346 1.12.32 2.24.638 3.958.554 1.501.075 2.815-.115 3.957-.554 1.142-.361 2.205-.784 3.11-1.387.905-.603 1.685-1.129 2.242-1.675.556-.546.976-1.129 1.242-1.675.266-.546.471-1.15.602-1.748.13-.598.204-1.23.204-1.879s-.074-1.281-.204-1.879c-.13-.598-.336-1.202-.602-1.748-.266-.546-.686-1.129-1.242-1.675-.905-.603-1.968-1.026-3.11-1.387zM9.999 15.321V8.679L15.42 12l-5.421 3.321z"/></svg>
+                        YouTube
                     </a>
                 </div>
-                <!-- Certificate/Achievement 2 -->
-                <div class="bg-gray-50 p-6 rounded-xl shadow-xl border-l-4 border-purple-500 hover:shadow-2xl transition-shadow duration-300">
-                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">[Another Certificate/Award Title]</h3>
-                    <p class="text-lg text-gray-600 mb-2"><strong>[Issuing Organization/Awarding Body]</strong> | [Year]</p>
-                    <p class="text-md text-gray-700 mb-4">[Brief description of what it signifies or what you achieved].</p>
-                    <a href="https://placehold.co/300x200/cccccc/333333?text=Certificate+Image" target="_blank" class="text-purple-600 hover:underline flex items-center">
-                        View Certificate 
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0l-7 7"></path></svg>
-                    </a>
-                </div>
-                <!-- Add more as needed -->
             </div>
-        </div>
-    </section>
-
-    <!-- Contact Me Section -->
-    <section id="contact" class="py-16 md:py-24 bg-gradient-to-r from-blue-600 to-purple-700 text-white px-4 rounded-t-3xl shadow-xl">
-        <div class="container mx-auto max-w-2xl text-center">
-            <h2 class="text-4xl font-bold mb-8">Get In Touch</h2>
-            <p class="text-xl mb-8">I'm always open to new opportunities and collaborations. Feel free to reach out!</p>
-            <div class="space-y-4">
-                <a href="mailto:your.email@example.com" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
-                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path></svg>
-                    your.email@example.com
-                </a>
-                <a href="https://linkedin.com/in/yourprofile" target="_blank" class="bg-white text-blue-700 hover:bg-blue-100 font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105 inline-flex items-center">
-                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.3 0H3.7C1.65 0 0 1.65 0 3.7v12.6C0 18.35 1.65 20 3.7 20h12.6c2.05 0 3.7-1.65 3.7-3.7V3.7C20 1.65 18.35 0 16.3 0zM6 17H3V7h3v10zM4.5 5.5A1.5 1.5 0 116 4a1.5 1.5 0 01-1.5 1.5zM17 17h-3v-5c0-1.2-.8-2-1.9-2-1.1 0-1.9.8-1.9 2v5h-3V7h3v.7c.6-1.1 1.7-1.8 3.3-1.8 2.2 0 3.8 1.4 3.8 4.5V17z" clip-rule="evenodd"></svg>
-                    LinkedIn Profile
-                </a>
-            </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
     <!-- Footer -->
     <footer class="bg-gray-800 text-white py-8 text-center">
         <p>&copy; <span id="current-year"></span> Your Name. All rights reserved.</p>
-        <p class="text-sm mt-2">Designed with ❤️ using HTML, Tailwind CSS, and Leaflet.js</p>
+        <p class="text-sm mt-2">Designed with ❤️ using HTML, Tailwind CSS, and Three.js</p>
     </footer>
 
     <!-- Image Modal/Lightbox Structure -->
@@ -270,38 +306,193 @@
         </div>
     </div>
 
-    <!-- Leaflet JavaScript -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjGwZZyihszBvIEAFIwQqnPN1/3z=="
-        crossorigin=""></script>
-
     <script>
         // Set current year in footer
         document.getElementById('current-year').textContent = new Date().getFullYear();
 
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
+        // --- Client-Side Navigation Logic ---
+        const sections = document.querySelectorAll('.page-section');
+        const navLinks = document.querySelectorAll('.nav-links a');
+        const menuToggle = document.getElementById('menuToggle');
+        const navMenu = document.getElementById('navLinks');
+
+        // Toggle mobile navigation menu
+        menuToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('open');
         });
 
-        // Initialize the Leaflet Map
-        const map = L.map('map').setView([20, 0], 2); // Centered on the world, zoom level 2
+        function hideAllSections() {
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+        }
 
-        // Add a tile layer (OpenStreetMap)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
+        function showSection(sectionId) {
+            hideAllSections();
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+                // Scroll to the top of the section, with a small offset for fixed nav
+                window.scrollTo({
+                    top: targetSection.offsetTop - (document.querySelector('nav').offsetHeight),
+                    behavior: 'smooth'
+                });
+            }
+            // Close mobile menu after navigation
+            navMenu.classList.remove('open');
+        }
 
-        // Data for your visited locations
-        // IMPORTANT: Replace the coordinates (latitude, longitude) and image URLs with your actual data!
-        // Placeholder images are used here from placehold.co.
-        const visitedLocations = [
+        function navigate(sectionId) {
+            history.pushState({ section: sectionId }, '', `#${sectionId}`);
+            showSection(sectionId);
+        }
+
+        // Handle initial load and browser back/forward buttons
+        window.addEventListener('popstate', (event) => {
+            const sectionId = event.state ? event.state.section : (window.location.hash ? window.location.hash.substring(1) : 'home');
+            showSection(sectionId);
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const initialSection = window.location.hash ? window.location.hash.substring(1) : 'home';
+            showSection(initialSection);
+        });
+
+        // --- Academics Data and Dynamic Rendering ---
+        const academicData = [
+            {
+                name: "Master of Science in Computer Science",
+                institution: "Stanford University",
+                cityCountry: "Stanford, USA",
+                dates: "Sept 2022 – May 2024",
+                gpa: "GPA: 3.9/4.0",
+                description: [
+                    "Specialized in Artificial Intelligence and Machine Learning.",
+                    "Developed a novel algorithm for real-time object detection in drone footage.",
+                    "Awarded 'Outstanding Graduate Researcher' for thesis on Federated Learning."
+                ],
+                image: "https://placehold.co/100x100/9333ea/ffffff?text=University+Logo" // Placeholder for University Logo
+            },
+            {
+                name: "Bachelor of Technology in Information Technology",
+                institution: "Indian Institute of Technology Bombay",
+                cityCountry: "Mumbai, India",
+                dates: "Aug 2018 – May 2022",
+                gpa: "GPA: 8.8/10",
+                description: [
+                    "Focused on Software Engineering and Database Management.",
+                    "Led a team project to build a secure e-commerce platform.",
+                    "Recipient of 'Academic Excellence Award' for consistent performance."
+                ],
+                image: "https://placehold.co/100x100/3b82f6/ffffff?text=College+Logo" // Placeholder for College Logo
+            },
+            {
+                name: "High School Diploma",
+                institution: "Delhi Public School",
+                cityCountry: "New Delhi, India",
+                dates: "April 2016 – March 2018",
+                gpa: "Percentage: 95%",
+                description: [
+                    "Completed secondary education with focus on Science and Mathematics.",
+                    "Captained the school's robotics club, winning regional competitions.",
+                    "Participated in various inter-school debates and science fairs."
+                ],
+                image: "https://placehold.co/100x100/10b981/ffffff?text=School+Logo" // Placeholder for School Logo
+            }
+        ];
+
+        const academicEntriesContainer = document.getElementById('academic-entries');
+        academicData.forEach((entry, index) => {
+            const entryDiv = document.createElement('div');
+            entryDiv.classList.add('bg-white', 'p-8', 'rounded-xl', 'shadow-xl', 'border-l-4',
+                                  index % 2 === 0 ? 'border-purple-500' : 'border-blue-500',
+                                  'hover:shadow-2xl', 'transition-shadow', 'duration-300', 'flex', 'items-center', 'space-x-6'); // Added flexbox for image
+            entryDiv.innerHTML = `
+                <div class="flex-shrink-0">
+                    <img src="${entry.image}" alt="${entry.institution} Logo" class="w-24 h-24 object-contain rounded-lg shadow-md">
+                </div>
+                <div>
+                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">${entry.name}</h3>
+                    <p class="text-lg text-gray-600 mb-2"><strong>${entry.institution}</strong> | ${entry.cityCountry}</p>
+                    <p class="text-md text-gray-500 mb-4">${entry.dates} | ${entry.gpa}</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        ${entry.description.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            academicEntriesContainer.appendChild(entryDiv);
+        });
+
+        // --- Work Experience Data and Dynamic Rendering ---
+        const experienceData = [
+            {
+                title: "Software Development Engineer",
+                company: "Tech Solutions Inc.",
+                cityCountry: "San Francisco, USA",
+                dates: "June 2024 – Present",
+                description: [
+                    "Developing scalable backend services using Python and Node.js.",
+                    "Implementing new features and optimizing existing code for performance.",
+                    "Collaborating with cross-functional teams to define project requirements."
+                ],
+                image: "https://placehold.co/100x100/1e40af/ffffff?text=Company+A" // Placeholder for Company Logo
+            },
+            {
+                title: "Junior Data Analyst",
+                company: "Data Insights Co.",
+                cityCountry: "London, UK",
+                dates: "July 2022 – May 2024",
+                description: [
+                    "Analyzed large datasets to identify key trends and insights.",
+                    "Developed dashboards and reports using Tableau for stakeholders.",
+                    "Improved data extraction processes, reducing manual effort by 30%."
+                ],
+                image: "https://placehold.co/100x100/c2410c/ffffff?text=Company+B" // Placeholder for Company Logo
+            },
+            {
+                title: "Intern Software Engineer",
+                company: "Innovate Labs",
+                cityCountry: "Bengaluru, India",
+                dates: "Jan 2022 – April 2022",
+                description: [
+                    "Assisted in the development of a mobile application using React Native.",
+                    "Contributed to bug fixing and testing phases.",
+                    "Gained experience in agile development methodologies."
+                ],
+                image: "https://placehold.co/100x100/047857/ffffff?text=Company+C" // Placeholder for Company Logo
+            }
+        ];
+
+        const experienceEntriesContainer = document.getElementById('experience-entries');
+        experienceData.forEach((entry, index) => {
+            const entryDiv = document.createElement('div');
+            entryDiv.classList.add('bg-gray-50', 'p-8', 'rounded-xl', 'shadow-xl', 'border-l-4',
+                                  index % 2 === 0 ? 'border-blue-500' : 'border-purple-500',
+                                  'hover:shadow-2xl', 'transition-shadow', 'duration-300', 'flex', 'items-center', 'space-x-6'); // Added flexbox for image
+            entryDiv.innerHTML = `
+                <div class="flex-shrink-0">
+                    <img src="${entry.image}" alt="${entry.company} Logo" class="w-24 h-24 object-contain rounded-lg shadow-md">
+                </div>
+                <div>
+                    <h3 class="text-2xl font-semibold mb-2 text-gray-900">${entry.title}</h3>
+                    <p class="text-lg text-gray-600 mb-2"><strong>${entry.company}</strong> | ${entry.cityCountry}</p>
+                    <p class="text-md text-gray-500 mb-4">${entry.dates}</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        ${entry.description.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            experienceEntriesContainer.appendChild(entryDiv);
+        });
+
+
+        // --- Three.js Globe Setup ---
+        let scene, camera, renderer, globe, controls;
+        const globeContainer = document.getElementById('globe-container');
+
+        // Data for your visited locations (reusing from previous version, adapted for globe)
+        const visitedLocationsGlobe = [
             {
                 name: "Paris, France",
                 lat: 48.8566,
@@ -366,22 +557,139 @@
                     "https://placehold.co/400x300/FF3357/FFFFFF?text=NYC+2",
                     "https://placehold.co/400x300/3357FF/FFFFFF?text=NYC+3"
                 ]
+            },
+            {
+                name: "Ahmedabad, India",
+                lat: 23.0225,
+                lon: 72.5714,
+                description: "My home city, a blend of rich history and modern development. Exploring its vibrant markets and cultural sites is always a joy.",
+                images: [
+                    "https://placehold.co/400x300/4f46e5/ffffff?text=Ahmedabad+1",
+                    "https://placehold.co/400x300/9333ea/ffffff?text=Ahmedabad+2"
+                ]
             }
         ];
 
-        // Get modal elements
+        function initGlobe() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xADD8E6); // Light blue background for space
+
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, globeContainer.clientWidth / globeContainer.clientHeight, 0.1, 1000);
+            camera.position.z = 2;
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // alpha: true for transparent background if needed
+            renderer.setSize(globeContainer.clientWidth, globeContainer.clientHeight);
+            renderer.domElement.id = 'globe-canvas'; // Give it an ID
+            globeContainer.appendChild(renderer.domElement);
+
+            // OrbitControls for interaction
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; // smooth zoom/rotate
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 1.5; // Minimum zoom
+            controls.maxDistance = 5;    // Maximum zoom
+            controls.enablePan = false;  // Disable panning for a fixed globe view
+
+            // Globe Geometry
+            const geometry = new THREE.SphereGeometry(1, 64, 64); // Radius 1, high resolution
+
+            // Earth Texture (using a simple placeholder texture)
+            // In a real application, you'd use a high-res earth map image like:
+            // const earthTexture = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg');
+            // For now, let's just make it a blueish sphere.
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x4169E1, // RoyalBlue color
+                specular: 0x333333,
+                shininess: 15
+                // map: earthTexture // Uncomment and use if you have a texture
+            });
+
+            globe = new THREE.Mesh(geometry, material);
+            scene.add(globe);
+
+            // Add basic lighting
+            const ambientLight = new THREE.AmbientLight(0x404040); // Soft white light
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 3, 5).normalize();
+            scene.add(directionalLight);
+
+            // Add markers for visited locations
+            visitedLocationsGlobe.forEach(location => {
+                // Convert lat/lon to 3D coordinates on a sphere of radius 1
+                const latRad = location.lat * Math.PI / 180;
+                const lonRad = -location.lon * Math.PI / 180; // Negative for correct orientation
+
+                const x = Math.cos(latRad) * Math.cos(lonRad);
+                const y = Math.sin(latRad);
+                const z = Math.cos(latRad) * Math.sin(lonRad);
+
+                const markerGeometry = new THREE.SphereGeometry(0.02, 16, 16); // Small sphere marker
+                const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xFFD700 }); // Gold color for markers
+                const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+
+                marker.position.set(x, y, z).normalize().multiplyScalar(1.01); // Slightly outside globe
+                marker.userData = location; // Store location data with the marker
+
+                globe.add(marker); // Add marker to the globe, so it rotates with it
+            });
+
+            // Raycaster for click detection
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            function onGlobeClick(event) {
+                // Calculate mouse position in normalized device coordinates (-1 to +1)
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+
+                const intersects = raycaster.intersectObjects(globe.children); // Check for intersection with markers
+
+                if (intersects.length > 0) {
+                    const intersectedObject = intersects[0].object;
+                    if (intersectedObject.userData && intersectedObject.userData.name) {
+                        openModal(intersectedObject.userData);
+                    }
+                }
+            }
+            renderer.domElement.addEventListener('click', onGlobeClick, false);
+
+            // Animation loop
+            const animateGlobe = () => {
+                requestAnimationFrame(animateGlobe);
+                controls.update(); // only required if controls.enableDamping or controls.autoRotate are set to true
+                renderer.render(scene, camera);
+            };
+
+            animateGlobe();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResizeGlobe, false);
+
+            function onWindowResizeGlobe() {
+                camera.aspect = globeContainer.clientWidth / globeContainer.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(globeContainer.clientWidth, globeContainer.clientHeight);
+            }
+        }
+
+        // --- Modal Functions (reusing from previous version) ---
         const imageModal = document.getElementById('imageModal');
         const modalLocationName = document.getElementById('modalLocationName');
         const modalLocationDescription = document.getElementById('modalLocationDescription');
         const modalImageContainer = document.getElementById('modalImageContainer');
 
-        // Function to open the modal
         function openModal(locationData) {
             modalLocationName.textContent = locationData.name;
             modalLocationDescription.textContent = locationData.description;
             modalImageContainer.innerHTML = ''; // Clear previous images
 
-            // Add images to the modal
             locationData.images.forEach(imageSrc => {
                 const img = document.createElement('img');
                 img.src = imageSrc;
@@ -394,28 +702,38 @@
             document.body.style.overflow = 'hidden'; // Prevent scrolling background
         }
 
-        // Function to close the modal
         function closeModal() {
             imageModal.classList.remove('open');
             document.body.style.overflow = ''; // Restore scrolling
         }
 
-        // Add event listener to close modal when clicking outside content
         imageModal.addEventListener('click', (e) => {
             if (e.target === imageModal) {
                 closeModal();
             }
         });
 
-        // Add markers for each location
-        visitedLocations.forEach(location => {
-            const marker = L.marker([location.lat, location.lon]).addTo(map);
+        // Initialize the globe when the travel section is first displayed
+        let globeInitialized = false;
+        function onTravelSectionActive() {
+            if (!globeInitialized) {
+                initGlobe();
+                globeInitialized = true;
+            }
+        }
 
-            // Attach click event to the marker
-            marker.on('click', () => {
-                openModal(location);
+        // Observe section visibility to initialize globe when 'travel' section becomes active
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.target.id === 'travel' && !globeInitialized) {
+                    onTravelSectionActive();
+                    observer.unobserve(entry.target); // Stop observing once initialized
+                }
             });
-        });
+        }, { threshold: 0.1 }); // Trigger when 10% of the section is visible
+
+        observer.observe(document.getElementById('travel'));
+
     </script>
 </body>
 </html>
